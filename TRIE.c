@@ -1,6 +1,7 @@
 //#include "TRIE.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #define NUM_LETTERS ((int)26)
 typedef enum {FALSE=0 , TRUE=1} boolean;
@@ -18,7 +19,7 @@ typedef struct trie{
     boolean is_empty;
     int max_word_length;
     char* word;
-}TRIE;
+}trie;
 
 void memory_allocation_error(void){
     printf("Memory allocation error.\n");
@@ -36,8 +37,8 @@ node* new_node(void){
  node* init_node(node* n, char letter){
      n->letter=letter;
      n->count=0;
-     n->is_last_letter=NO;
-     n->has_kids=NO;
+     n->is_last_letter=FALSE;
+     n->has_kids=FALSE;
      for(int i=0;i<NUM_LETTERS;i++){
          (n->children)[i]=NULL;
      }
@@ -66,13 +67,20 @@ void free_node(node* n){
     return; 
 }
 
+trie* new_trie(void){
+    trie* t;
+    if(!(t=(trie*)malloc(sizeof(trie)))){
+        memory_allocation_error();
+    }
+    return t;
+}
 trie* initialize_trie(trie* t) {
     int i;
     for (i=0; i<NUM_LETTERS; ++i) {
         t->children[i]=NULL;
     }
     t->current=NULL;
-    t->empty=YES;
+    t->is_empty=TRUE;
     t->max_word_length=0;
     return t;
 }
@@ -85,11 +93,11 @@ void close_word(trie* root) {
     if (root->current == NULL)
         return;
     root->current->count++;
-    root->current->is_word = YES;
+    root->current->is_last_letter = TRUE;
     root->current=NULL;
 }
 boolean is_empty(trie* root) {
-    return root->empty;
+    return root->is_empty;
 }
 int char2index(char c) {
     return c-'a';
@@ -105,13 +113,14 @@ int read_character(trie* root, int c) {
     c=tolower(c);
     index= char2index(c);
     if (root->current==NULL) { /* new word - start from root */
-        if (root->children[index] == NULL)
+        if (root->children[index] == NULL) {
             root->children[index] = create_node(c);
-            root->current = root->children[index];
-            root->empty=NO;
+        }
+        root->current = root->children[index];
+        root->is_empty=FALSE;
     }
     else {
-        root->current->has_kids = YES;
+        root->current->has_kids = TRUE;
         if (root->current->children[index] == NULL)
             root->current->children[index] = create_node(c);
         root->current=root->current->children[index];
@@ -124,6 +133,7 @@ void allocate_word(trie* root) {
         memory_allocation_error();
 }
 trie* read_text() {
+    int c;
     int word_length;
     trie* root;
     root = create_trie();
@@ -150,14 +160,14 @@ void print_words_reverse(trie* root) {
             root->current = current; /* recall */
         }
     } else {
-        if (root->current->is_word) {
+        if (root->current->is_last_letter) {
             root->word[p]='\0';
             printf("%s\t%ld\n",root->word,root->current->count);
         }
     --p;
     return;
     }
-    if (root->current->is_word) {
+    if (root->current->is_last_letter) {
         root->word[p]='\0';
         printf("%s\t%ld\n",root->word,root->current->count);
     }
@@ -179,9 +189,9 @@ void print_trie_reverse(trie* root) {
 void print_words(trie* root) {
     static int p=0;
     int i;
-    node* current;
+    node* current = NULL;
     root->word[p++]=root->current->letter;
-    if (root->current->is_word) {
+    if (root->current->is_last_letter) {
         root->word[p]='\0';
         printf("%s\t%ld\n",root->word,root->current->count);
     }
@@ -231,15 +241,15 @@ boolean should_reverse(int argc, char* argv[]) {
     if (argc > 2)
         usage(argv[0],"Wrong number of arguments.");
     if ( (argc == 2) && (argv[1][0]=='r' || argv[1][0]=='R') )
-        return YES;
+        return TRUE;
     if (argc == 1)
-        return NO;
+        return FALSE;
     usage(argv[0],"Bad command line arguments.");
-    return NO; /* will never get here */
+    return FALSE; /* will never get here */
 }
 int main(int argc, char* argv[]) {
     trie* root;
-    boolean r=NO;
+    boolean r=FALSE;
     r = should_reverse(argc,argv);
     root = read_text();
     if (r)
