@@ -1,4 +1,3 @@
-//#include "TRIE.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -8,58 +7,51 @@ typedef enum {FALSE=0 , TRUE=1} boolean;
 typedef struct node{
     char letter;
     long unsigned int count;
-    struct node* children[NUM_LETTERS];
-    boolean is_last_letter;// if the node is a the last letter in the node.
+    boolean is_word;// if the node is a the last letter in the word.
     boolean has_kids;// if the node is a leaf or not.
+    struct node* children[NUM_LETTERS];
 }node;
 
 typedef struct trie{
-    node* current;
     node* children[NUM_LETTERS];
-    boolean is_empty;
+    node* current;
+    boolean empty;
     int max_word_length;
     char* word;
 }trie;
 
-void memory_allocation_error(void){
+void memory_allocation_error(void){// throw exception if there is no memroy space and exit.
     printf("Memory allocation error.\n");
     exit(1);
 }
 
-node* new_node(void){
+node* new_node(char letter){
     node* n;
-    if (!(n=(node*)malloc(sizeof(node)))){
+    if (!(n=(node*)malloc(sizeof(node)))){// if there is no memory space for the new node
         memory_allocation_error();
     }
+    //otherwise, create new  node with the given letter.
+    int i;
+     n->letter=letter;
+     n->count=0;
+     n->is_word=FALSE;
+     n->has_kids=FALSE;
+     for(i=0;i<NUM_LETTERS;i++){
+         (n->children)[i]=NULL;
+     }
     return n;
 }
 
- node* init_node(node* n, char letter){
-     n->letter=letter;
-     n->count=0;
-     n->is_last_letter=FALSE;
-     n->has_kids=FALSE;
-     for(int i=0;i<NUM_LETTERS;i++){
-         (n->children)[i]=NULL;
-     }
-      return n;    
- }
- 
-node* create_node(char letter){
-    node* cr_node;
-    cr_node=new_node();
-    return init_node(cr_node, letter);
-}
-
 void free_node(node* n){
+    int i;
     if(n==NULL){
         return;
     }
-    if((n->has_kids)==0){
+    if(0==(n->has_kids)){// the node is a leaf
         free(n);
     }
     else{
-        for (int i = 0; i <NUM_LETTERS; i++)
+        for (i = 0; i <NUM_LETTERS; i++)// free all the children of the node
         {
            free_node((n->children)[i]);
         }
@@ -69,35 +61,29 @@ void free_node(node* n){
 
 trie* new_trie(void){
     trie* t;
-    if(!(t=(trie*)malloc(sizeof(trie)))){
+    if(!(t=(trie*)malloc(sizeof(trie)))){// if there is no memory space for the new trie
         memory_allocation_error();
     }
-    return t;
-}
-trie* initialize_trie(trie* t) {
+    //otherwise, create new trie.
     int i;
     for (i=0; i<NUM_LETTERS; ++i) {
         t->children[i]=NULL;
     }
     t->current=NULL;
-    t->is_empty=TRUE;
+    t->empty=TRUE;
     t->max_word_length=0;
     return t;
 }
-trie* create_trie(void) {
-    trie* created_trie;
-    created_trie=new_trie();
-    return initialize_trie(created_trie);
-}
+
 void close_word(trie* root) {
-    if (root->current == NULL)
+    if (root->current == NULL)// if there is no word.
         return;
     root->current->count++;
-    root->current->is_last_letter = TRUE;
+    root->current->is_word = TRUE;// the last letter in the word
     root->current=NULL;
 }
 boolean is_empty(trie* root) {
-    return root->is_empty;
+    return root->empty;
 }
 int char2index(char c) {
     return c-'a';
@@ -105,44 +91,42 @@ int char2index(char c) {
 int read_character(trie* root, int c) {
     int index;
     int word_length=0;
-    if(!isalpha(c)) {
+    if(!isalpha(c)) {// the char is not a letter (finish to read the word)
         close_word(root);
         return word_length;
     }
     word_length++;
     c=tolower(c);
     index= char2index(c);
-    if (root->current==NULL) { /* new word - start from root */
+    if (root->current==NULL) { //new word - start from root 
         if (root->children[index] == NULL) {
-            root->children[index] = create_node(c);
+            root->children[index] = new_node(c);
         }
         root->current = root->children[index];
-        root->is_empty=FALSE;
+        root->empty=FALSE;
     }
     else {
         root->current->has_kids = TRUE;
         if (root->current->children[index] == NULL)
-            root->current->children[index] = create_node(c);
+            root->current->children[index] = new_node(c);
         root->current=root->current->children[index];
     }
     return word_length;
 }
-void allocate_word(trie* root) {
-    free(root->word);
-    if (!(root->word=(char*)malloc(1+sizeof(char)*(root->max_word_length))) )
-        memory_allocation_error();
-}
+
 trie* read_text() {
     int c;
     int word_length;
     trie* root;
-    root = create_trie();
+    root = new_trie();
     while( EOF!=(c=getchar()) ) {
         word_length=read_character(root,c);
         if (word_length>root->max_word_length)
             root->max_word_length=word_length;
     }
-    allocate_word(root);
+   free(root->word);
+    if (!(root->word=(char*)malloc(1+sizeof(char)*(root->max_word_length))) )// there is no memory space for the longest word
+        memory_allocation_error();
     return root;
 }
 void print_words_reverse(trie* root) {
@@ -150,7 +134,7 @@ void print_words_reverse(trie* root) {
     int i;
     node* current;
     root->word[p++]=root->current->letter;
-    if (root->current->has_kids) {
+    if (root->current->has_kids){
         for (i=NUM_LETTERS-1; i>=0; --i) {
             if (root->current->children[i] == NULL)
                 continue;
@@ -160,14 +144,14 @@ void print_words_reverse(trie* root) {
             root->current = current; /* recall */
         }
     } else {
-        if (root->current->is_last_letter) {
+        if (root->current->is_word) {// the end of a word
             root->word[p]='\0';
             printf("%s\t%ld\n",root->word,root->current->count);
         }
-    --p;
-    return;
+        --p;
+        return;
     }
-    if (root->current->is_last_letter) {
+    if (root->current->is_word) {
         root->word[p]='\0';
         printf("%s\t%ld\n",root->word,root->current->count);
     }
@@ -191,7 +175,7 @@ void print_words(trie* root) {
     int i;
     node* current = NULL;
     root->word[p++]=root->current->letter;
-    if (root->current->is_last_letter) {
+    if (root->current->is_word) {//end of the word
         root->word[p]='\0';
         printf("%s\t%ld\n",root->word,root->current->count);
     }
@@ -199,6 +183,7 @@ void print_words(trie* root) {
         for(i=0; i<NUM_LETTERS; ++i) {
             if (root->current->children[i] == NULL)
                 continue;
+            current=root->current;
             root->current = root->current->children[i];
             print_words(root);
             root->current = current; /* recall */
@@ -233,24 +218,24 @@ void free_trie(trie* t) {
     free(t);
 }
 void usage(char* program_name,char* message) {
+    //print errors
     printf("\n%s\n\n",message);
     printf("USAGE:\n\t%s: %s\n\n",program_name,message);
     exit(1);
 }
 boolean should_reverse(int argc, char* argv[]) {
-    if (argc > 2)
+    if (argc > 2)// if there are more than 2 arguments
         usage(argv[0],"Wrong number of arguments.");
-    if ( (argc == 2) && (argv[1][0]=='r' || argv[1][0]=='R') )
+    if ( (argc == 2) && (argv[1][0]=='r' || argv[1][0]=='R') )// the secnod argument is the parameter 'r'
         return TRUE;
-    if (argc == 1)
+    if (argc == 1)// there is no parameter
         return FALSE;
     usage(argv[0],"Bad command line arguments.");
-    return FALSE; /* will never get here */
+    return FALSE; // will never get here 
 }
 int main(int argc, char* argv[]) {
     trie* root;
-    boolean r=FALSE;
-    r = should_reverse(argc,argv);
+    boolean r = should_reverse(argc,argv);
     root = read_text();
     if (r)
         print_trie_reverse(root);
