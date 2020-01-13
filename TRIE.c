@@ -1,24 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-
-#define NUM_LETTERS ((int)26)
-typedef enum {FALSE=0 , TRUE=1} boolean;
-typedef struct node{
-    char letter;
-    long unsigned int count;
-    boolean is_word;// if the node is a the last letter in the word.
-    boolean has_kids;// if the node is a leaf or not.
-    struct node* children[NUM_LETTERS];
-}node;
-
-typedef struct trie{
-    node* children[NUM_LETTERS];
-    node* current;
-    boolean empty;
-    int max_word_length;
-    char* word;
-}trie;
+#include "TRIE.h"
 
 void memory_allocation_error(void){// throw exception if there is no memroy space and exit.
     printf("Memory allocation error.\n");
