@@ -36,7 +36,7 @@ node* new_node(char letter){
      n->count=0;
      n->is_word=FALSE;
      n->has_kids=FALSE;
-     for(i=0;i<NUM_LETTERS;i++){
+     for(i=0;i<NUM_LETTERS;++i){
          (n->children)[i]=NULL;
      }
     return n;
@@ -47,16 +47,26 @@ void free_node(node* n){
     if(n==NULL){
         return;
     }
-    if(0==(n->has_kids)){// the node is a leaf
-        free(n);
-    }
-    else{
+    if(n->has_kids){// the node is a leaf
         for (i = 0; i <NUM_LETTERS; i++)// free all the children of the node
         {
            free_node((n->children)[i]);
         }
     }
+    free(n);
     return; 
+}
+
+trie* init_trie(trie* t){
+  int i;
+    for (i=0; i<NUM_LETTERS; ++i) {
+        t->children[i]=NULL;
+    }
+    t->current=NULL;
+    t->empty=TRUE;
+    t->max_word_length=0;
+    t->word=NULL;
+    return t;
 }
 
 trie* new_trie(void){
@@ -65,15 +75,10 @@ trie* new_trie(void){
         memory_allocation_error();
     }
     //otherwise, create new trie.
-    int i;
-    for (i=0; i<NUM_LETTERS; ++i) {
-        t->children[i]=NULL;
-    }
-    t->current=NULL;
-    t->empty=TRUE;
-    t->max_word_length=0;
-    return t;
+    return init_trie(t);
+  
 }
+
 
 void close_word(trie* root) {
     if (root->current == NULL)// if there is no word.
@@ -88,9 +93,9 @@ boolean is_empty(trie* root) {
 int char2index(char c) {
     return c-'a';
 }
-int read_character(trie* root, int c) {
+int read_character(trie* root, int c, int word_length) {
     int index;
-    int word_length=0;
+    //int word_length=0;
     if(!isalpha(c)) {// the char is not a letter (finish to read the word)
         close_word(root);
         return word_length;
@@ -116,13 +121,15 @@ int read_character(trie* root, int c) {
 
 trie* read_text() {
     int c;
-    int word_length;
+    int word_length=0;
     trie* root;
     root = new_trie();
     while( EOF!=(c=getchar()) ) {
-        word_length=read_character(root,c);
+        word_length=read_character(root,c,word_length);
         if (word_length>root->max_word_length)
             root->max_word_length=word_length;
+        if(!isalpha(c))
+            word_length=0;
     }
    free(root->word);
     if (!(root->word=(char*)malloc(1+sizeof(char)*(root->max_word_length))) )// there is no memory space for the longest word
@@ -215,6 +222,7 @@ void free_trie(trie* t) {
     for(i=0;i<NUM_LETTERS; ++i) {
         free_node(t->children[i]);
     }
+    free(t->word);
     free(t);
 }
 void usage(char* program_name,char* message) {
